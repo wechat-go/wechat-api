@@ -1,0 +1,9 @@
+# This is a TOML document.
+
+[database]
+server = "192.168.0.170:3306"   #格式："地址:端口"
+username="root"
+password="root"
+Dataname="wechat"
+Rdserver="192.168.0.114:6379"
+RdPW="root"
