@@ -10,6 +10,7 @@ import (
 	"zyjsxy-api/util"
 	"zyjsxy-api/util/aes"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,11 +18,13 @@ func GetTokenApi(c *gin.Context) {
 	obj := util.GetObj(c.Request.Body)
 	sort := int(obj["sort"].(float64))
 	if sort == 1 {
-		register(c, &obj)
+		//		register(c, &obj)
 	} else if srot == 2 {
 		login(c, &obj)
 	} else if sort == 3 {
 		resetpw(c, &obj)
+	} else if sort == 4 || sort == 5 { //注册短信发送
+		sendSms(c, obj)
 	}
 }
 
@@ -48,9 +51,53 @@ func RevokeTokenApi(c *gin.Context) {
 	}
 }
 
-func register(c *gin.Context, o *map[string]interface{}) {
-	phone := o["phone"].(string)
+func sendSms(c *gin.Context, o *map[string]interface{}) {
+	//参数获取
+	obj := util.GetObj(c.Request.Body)
+	sort := int(obj["sort"].(float64))
+	phone := obj["phone"].(string)
+
+	//开始发送
+	if !util.IsPhone(phone) {
+		c.JSON(500, "手机号码不对，请重新输入！")
+		return
+	}
+
+	//获取手机号码发送的次数
+	np := GetRedis("np_" + phone)
+	if np == "3" {
+		c.JSON(500, "每天最多只能发送三条短信，您已超过次数！")
+		return
+	}
+
+	info := util.NewSmsInfo()
+	info.Mobile = phone
+	if sort == 4 {
+		info.Sort = "注册"
+	} else if sort == 5 {
+		info.Sort = "密码重置"
+	}
+	b := uitl.Sendsms(info)
+	if b {
+		c.JSON(200, "验证码发送成功！")
+		SaveRedis("nr_"+phone, info.Code, 300)
+		if np == "" {
+			SaveRedis("np_"+phone, "1", 86400)
+		} else if np == "1" {
+			UpRedis("np_"+phone, "2")
+		} else if np == "2" {
+			UpRedis("np_"+phone, "3")
+		}
+		return
+	} else {
+		c.JSON(500, "您的手机号暂时不支持！")
+		return
+	}
 }
+
+//func register(c *gin.Context, o *map[string]interface{}) {
+//	c.JSON(200,"成功！")
+//}
 
 func login(c *gin.Context, o *map[string]interface{}) {
 	userName := obj["username"].(string)
