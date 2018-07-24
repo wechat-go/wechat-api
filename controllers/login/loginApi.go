@@ -18,7 +18,7 @@ func GetTokenApi(c *gin.Context) {
 	obj := util.GetObj(c.Request.Body)
 	sort := int(obj["sort"].(float64))
 	if sort == 1 {
-		//		register(c, &obj)
+		register(c, &obj)
 	} else if srot == 2 {
 		login(c, &obj)
 	} else if sort == 3 {
@@ -95,9 +95,47 @@ func sendSms(c *gin.Context, o *map[string]interface{}) {
 	}
 }
 
-//func register(c *gin.Context, o *map[string]interface{}) {
-//	c.JSON(200,"成功！")
-//}
+func register(c *gin.Context, o *map[string]interface{}) {
+	phone := obj["phone"].(string)
+	pass := obj["pass"].(string)
+
+	//判断是否非空
+	if phone == "" || pass == "" {
+		c.JSON(500, "手机号或密码不能为空！")
+		return
+	}
+
+	//新建用户
+	user := system.User{Username: phone, phone: phone, Avatar: "/img/user.jpg", Password: aes.Hashsalt(pass)}
+	err := system.AddUser(&user)
+	if err != nil {
+		c.JSON(500, "您的注册审核不通过，请联系管理员！")
+		return
+	}
+
+	//结果构造
+	results := make(map[string]interface{})
+
+	//获取用户ip
+	orip := c.GetHeader("X-Real-IP")
+	if orip == "" {
+		orip = c.Request.RemoteAddr
+	}
+
+	//加密包
+	aesEnc := aes.AesEncrypt{}
+
+	//token生成
+	str := "{id:" + strconv.Itoa(int(user.ID)) + ",ip:" + orip + ",over:" + strconv.FormatInt(time.Now().Unix()+7200, 10) + "}"
+	tokenbyte, _ := aesEnc.Encrypt(str)
+	toke := base64.StdEncoding.EncodeToString(tokenbyte)
+	results["access_token"] = toke
+	results["expires_in"] = 7200
+	SaveToken("token_"+strconv.Itoa(int(u.ID)), toke, 7200)
+
+	c.JSON(200, results)
+
+}
 
 func login(c *gin.Context, o *map[string]interface{}) {
 	userName := obj["username"].(string)

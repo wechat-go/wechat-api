@@ -5,10 +5,6 @@ import (
 	"net/http"
 	"strings"
 	"zyjsxy-api/controllers/login"
-	"zyjsxy-api/controllers/personneloffice"
-	"zyjsxy-api/controllers/system"
-	"zyjsxy-api/controllers/workflow"
-	"zyjsxy-api/controllers/workreport"
 	"zyjsxy-api/database"
 	"zyjsxy-api/util/aes"
 

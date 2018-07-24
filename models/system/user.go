@@ -93,6 +93,11 @@ func init() {
 	}
 }
 
+func AddUser(user *User) (err error) {
+	err = db.Orm.Create(user).Error
+	return err
+}
+
 func AddUserRole(user PostUserInfo) (err error) {
 	var u User
 	u.Username = user.Username
